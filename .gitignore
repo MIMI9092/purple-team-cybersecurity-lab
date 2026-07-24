@@ -1,0 +1,31 @@
+# Obsidian per-device state
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache/
+.trash/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Sensitive security-lab artifacts
+*.pcap
+*.pcapng
+*.ccache
+*.kirbi
+*.hash
+*.hc22000
+
+# Virtual-machine and lock files
+*.vmdk
+*.vmem
+*.vmss
+*.vmsn
+*.lck
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*~
