@@ -20,6 +20,12 @@ Open the repository as an Obsidian vault, then begin with:
 
 `00 - Dashboard/Project Dashboard.md`
 
+## Documentation Conventions
+
+- Use Mermaid for architecture, attack-chain, data-flow, and response diagrams.
+- Keep commands, paths, addresses, account names, and captured output in normal code blocks.
+- Redact credentials, tokens, hashes, and other reusable secrets before committing evidence.
+
 ## Structure
 
 | Folder | Purpose |
@@ -40,4 +46,3 @@ Open the repository as an Obsidian vault, then begin with:
 This repository documents activity performed only inside an authorized,
 isolated laboratory. Passwords, session cookies, API keys, Kerberos ticket
 files, password hashes, and other reusable secrets are intentionally excluded.
-

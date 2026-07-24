@@ -6,28 +6,22 @@ An external attacker discovers a vulnerable web application exposed through the 
 
 ## Attack Path
 
-```text
-Kali attacker
-  |
-  | TCP 8080 through OPNsense destination NAT
-  v
-DVWA container in DMZ
-  |
-  | Reverse shell and Chisel SOCKS tunnel
-  v
-Windows 10 client as LAB\svc_web
-  |
-  | Second Chisel SOCKS tunnel
-  v
-AD-DC01
-  |
-  | Kerberos TGS request
-  v
-svc_sql Kerberoast hash
-  |
-  | Offline password recovery
-  v
-Valid svc_sql credential and TGT
+```mermaid
+flowchart LR
+    Kali["Kali attacker"]
+    OPNsense["OPNsense firewall"]
+    DVWA["DVWA container<br/>DMZ"]
+    Win10["Windows 10 client<br/>LAB&#92;svc_web"]
+    DC["AD-DC01"]
+    Hash["svc_sql Kerberoast hash"]
+    Credential["Valid svc_sql credential<br/>and TGT"]
+
+    Kali -->|"TCP 8080"| OPNsense
+    OPNsense -->|"Destination NAT"| DVWA
+    DVWA -->|"Reverse shell and<br/>Chisel SOCKS tunnel"| Win10
+    Win10 -->|"Second Chisel<br/>SOCKS tunnel"| DC
+    DC -->|"Kerberos TGS request"| Hash
+    Hash -->|"Offline password recovery"| Credential
 ```
 
 ## Phase Mapping

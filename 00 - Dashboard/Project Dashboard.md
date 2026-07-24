@@ -81,7 +81,16 @@ Build and evaluate a segmented purple-team laboratory that combines:
 
 The lab has progressed from an external Kali host to a validated Active Directory service-account credential:
 
-`Kali -> OPNsense NAT -> DVWA -> Windows 10 -> AD-DC01`
+```mermaid
+flowchart LR
+    Kali["Kali"]
+    OPNsense["OPNsense NAT"]
+    DVWA["DVWA"]
+    Win10["Windows 10"]
+    DC["AD-DC01"]
+
+    Kali --> OPNsense --> DVWA --> Win10 --> DC
+```
 
 The next activity is to determine what the recovered `svc_sql` account is authorized to access without assuming that valid authentication provides administrative privileges.
 

@@ -23,8 +23,12 @@
 
 Destination NAT maps:
 
-```text
-OPNsense WAN TCP 8080 -> 10.10.60.10 TCP 80
+```mermaid
+flowchart LR
+    WAN["OPNsense WAN<br/>TCP 8080"]
+    DVWA["DVWA<br/>10.10.60.10:80"]
+
+    WAN -->|"Destination NAT"| DVWA
 ```
 
 This lets Kali reach DVWA without exposing the DMZ host directly on the external network.
@@ -43,8 +47,12 @@ This should be allowed and logged.
 
 The attack scenario temporarily allowed:
 
-```text
-10.10.60.10 -> 10.10.30.20:5985/TCP
+```mermaid
+flowchart LR
+    DVWA["DVWA<br/>10.10.60.10"]
+    Win10["WIN10-CLIENT01<br/>10.10.30.20:5985"]
+
+    DVWA -->|"Temporary WinRM rule"| Win10
 ```
 
 This was required for the controlled WinRM lateral-movement scenario. It is an intentional weakness and should be removed or disabled during the defensive phase.

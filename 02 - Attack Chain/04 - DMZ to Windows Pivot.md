@@ -20,8 +20,15 @@ Kali SOCKS listener: 127.0.0.1:1080
 
 Proxychains redirected supported Kali TCP tools into the SOCKS proxy.
 
-```text
-Kali tool -> 127.0.0.1:1080 -> Chisel -> DVWA -> internal target
+```mermaid
+flowchart LR
+    Tool["Kali TCP tool"]
+    Socks1080["SOCKS5 proxy<br/>127.0.0.1:1080"]
+    Chisel["Chisel reverse tunnel"]
+    DVWA["DVWA pivot<br/>10.10.60.10"]
+    Target["Internal target"]
+
+    Tool --> Socks1080 --> Chisel --> DVWA --> Target
 ```
 
 This allowed Kali to test internal services without having a direct route to the internal VLAN.
@@ -30,8 +37,12 @@ This allowed Kali to test internal services without having a direct route to the
 
 The lab temporarily allowed:
 
-```text
-10.10.60.10 -> 10.10.30.20:5985/TCP
+```mermaid
+flowchart LR
+    DVWA["DVWA<br/>10.10.60.10"]
+    Win10["WIN10-CLIENT01<br/>10.10.30.20"]
+
+    DVWA -->|"WinRM TCP 5985"| Win10
 ```
 
 Windows 10 had:
@@ -57,8 +68,14 @@ Kali SOCKS listener: 127.0.0.1:1081
 
 The second tunnel used Windows 10 as the pivot point:
 
-```text
-Kali -> Windows 10 -> AD-DC01
+```mermaid
+flowchart LR
+    Kali["Kali<br/>SOCKS 127.0.0.1:1081"]
+    Win10["WIN10-CLIENT01<br/>Chisel pivot"]
+    DC["AD-DC01"]
+
+    Kali -->|"Second Chisel tunnel"| Win10
+    Win10 -->|"Kerberos 88<br/>LDAP 389<br/>SMB 445"| DC
 ```
 
 It successfully reached AD ports:

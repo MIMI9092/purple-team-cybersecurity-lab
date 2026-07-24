@@ -2,16 +2,16 @@
 
 ## Architecture
 
-```text
-Splunk scheduled alert
-        |
-        | HTTP webhook
-        v
-Shuffle workflow
-        |
-        | Splunk REST API query
-        v
-Splunk management API: 10.10.50.10:8089
+```mermaid
+sequenceDiagram
+    participant Alert as Splunk Scheduled Alert
+    participant Workflow as Shuffle Workflow
+    participant API as Splunk Management API
+
+    Alert->>Workflow: HTTP webhook with alert result
+    Workflow->>API: REST API enrichment query
+    Note right of API: 10.10.50.10:8089
+    API-->>Workflow: HTTP 200 with related events
 ```
 
 ## Completed Workflow

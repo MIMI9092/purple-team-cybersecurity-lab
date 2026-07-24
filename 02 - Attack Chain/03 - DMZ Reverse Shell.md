@@ -20,8 +20,12 @@ Working directory: /var/www/html/vulnerabilities/exec
 
 Kali listened on TCP `443`. The vulnerable application launched a shell that initiated an outbound connection to Kali.
 
-```text
-DVWA www-data shell -> Kali TCP 443
+```mermaid
+flowchart RL
+    DVWA["DVWA container<br/>www-data shell"]
+    Kali["Kali listener<br/>TCP 443"]
+
+    DVWA -->|"Outbound reverse-shell connection"| Kali
 ```
 
 The shell displayed terminal-control warnings because it was a basic non-interactive shell without a proper TTY. Command execution still worked.

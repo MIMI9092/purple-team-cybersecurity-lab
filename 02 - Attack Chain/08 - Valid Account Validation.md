@@ -8,8 +8,14 @@ Confirm that the password recovered during offline analysis was still valid with
 
 Impacket requested a Kerberos Ticket Granting Ticket for `svc_sql` through the Windows 10 SOCKS pivot.
 
-```text
-Kali -> SOCKS 1081 -> WIN10-CLIENT01 -> AD-DC01:88
+```mermaid
+flowchart LR
+    Kali["Kali<br/>Impacket"]
+    Socks["SOCKS5<br/>127.0.0.1:1081"]
+    Win10["WIN10-CLIENT01<br/>pivot"]
+    DC["AD-DC01<br/>Kerberos TCP 88"]
+
+    Kali --> Socks --> Win10 -->|"TGT request for svc_sql"| DC
 ```
 
 The domain controller accepted the credential and returned a TGT.

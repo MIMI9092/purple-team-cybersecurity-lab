@@ -6,25 +6,45 @@ The project uses VMware Workstation for endpoint and security VMs and GNS3 for r
 
 ## Logical Topology
 
-```text
-Kali attacker: 192.168.111.144
-        |
-        | VMnet8 / external network
-        v
-OPNsense WAN: 192.168.111.128
-        |
-        +-- NAT TCP 8080 -> 10.10.60.10:80
-        |
-        +-- DMZ interface: 10.10.60.1/24
-        |       |
-        |       +-- DVWA: 10.10.60.10
-        |
-        +-- Transit: 10.10.70.1/30
-                |
-                +-- Cisco R1: 10.10.70.2/30
-                        |
-                        +-- VLAN 30: Windows and AD
-                        +-- VLAN 50: SOC
+```mermaid
+flowchart TB
+    subgraph External["External zone - VMnet8 / 192.168.111.0/24"]
+        Kali["Kali attacker<br/>192.168.111.144"]
+        WAN["OPNsense WAN<br/>192.168.111.128"]
+        Kali -->|"TCP 8080"| WAN
+    end
+
+    Firewall["OPNsense firewall<br/>Suricata IDS"]
+
+    subgraph DMZ["DMZ - 10.10.60.0/24"]
+        DMZGW["OPNsense DMZ<br/>10.10.60.1"]
+        DVWA["DVWA<br/>10.10.60.10"]
+        DMZGW --- DVWA
+    end
+
+    subgraph Transit["Transit - 10.10.70.0/30"]
+        OPTLAN["OPNsense transit<br/>10.10.70.1"]
+        R1["Cisco R1<br/>10.10.70.2"]
+        OPTLAN --- R1
+    end
+
+    subgraph Internal["Internal network"]
+        subgraph VLAN30["VLAN 30 - Internal / AD"]
+            AD["AD-DC01<br/>10.10.30.10"]
+            Win10["WIN10-CLIENT01<br/>10.10.30.20"]
+        end
+
+        subgraph VLAN50["VLAN 50 - SOC"]
+            Splunk["Splunk SIEM<br/>10.10.50.10"]
+            Shuffle["Shuffle SOAR<br/>10.10.50.30"]
+        end
+    end
+
+    WAN --- Firewall
+    Firewall -->|"Destination NAT<br/>TCP 8080 to TCP 80"| DMZGW
+    Firewall --- OPTLAN
+    R1 -->|"802.1Q VLAN 30"| AD
+    R1 -->|"802.1Q VLAN 50"| Splunk
 ```
 
 ## Internal Routing
