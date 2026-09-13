@@ -9,7 +9,7 @@ Demonstrate how a weak service-account password can be recovered from Kerberos t
 The Kerberoast evidence used:
 
 ```text
-$krb5tgs$23$
+<KERBEROS_TICKET_MATERIAL_REDACTED>
 ```
 
 This indicated:

@@ -1,0 +1,2 @@
+shuffle-sdk
+pywinrm==0.5.0

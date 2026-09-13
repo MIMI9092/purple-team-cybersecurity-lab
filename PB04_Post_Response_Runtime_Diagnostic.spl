@@ -1,0 +1,4 @@
+| makeresults
+| eval runtime_target=lower(trim("$validate_current_ad_account_state.message.target_account")),containment_iso="$validate_current_ad_account_state.message.ad_action_request.planned_at"
+| eval authentication_observation="RUNTIME_DIAGNOSTIC_OK",verification_window_valid=if(runtime_target!="" AND containment_iso!="","true","false"),total_authentication_events=0,successful_authentication_events=0,failed_or_denied_events=0,explicit_credential_events=0,privileged_session_events=0
+| table runtime_target containment_iso authentication_observation verification_window_valid total_authentication_events successful_authentication_events failed_or_denied_events explicit_credential_events privileged_session_events

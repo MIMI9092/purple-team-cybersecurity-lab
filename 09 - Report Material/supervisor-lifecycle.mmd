@@ -1,0 +1,10 @@
+flowchart LR
+    A["Adversary emulation"] --> B["Web, network, endpoint and identity telemetry"]
+    B --> C["Splunk detections and correlations"]
+    C --> D["Shuffle normalization and enrichment"]
+    D --> E{"Analyst decision"}
+    E -->|"Reject"| F["Stop safely"]
+    E -->|"Approve"| G["Scoped temporary containment"]
+    G --> H["Verify"]
+    H --> I["Rollback"]
+    I --> J["Recovery verification and audit"]

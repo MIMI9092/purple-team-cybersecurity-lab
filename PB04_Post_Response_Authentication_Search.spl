@@ -1,0 +1,80 @@
+| makeresults
+| eval row_type="BASELINE"
+| eval total_authentication_events=0
+| eval successful_authentication_events=0
+| eval failed_or_denied_events=0
+| eval explicit_credential_events=0
+| eval privileged_session_events=0
+| append [
+    search index=main earliest=-30m latest=now host="AD-DC01" source="WinEventLog:Security" (EventCode=4768 OR EventCode=4771 OR EventCode=4624 OR EventCode=4625 OR EventCode=4648 OR EventCode=4672)
+    | eval runtime_target=lower(trim("$validate_current_ad_account_state.message.target_account"))
+    | eval containment_iso="$validate_current_ad_account_state.message.ad_action_request.planned_at"
+    | eval containment_epoch=strptime(substr(containment_iso,1,19)."+0000","%Y-%m-%dT%H:%M:%S%z")
+    | eval event_code=tonumber(coalesce(EventCode,EventID))
+    | eval account_value=if(
+        event_code=4672,
+        coalesce(SubjectUserName,Subject_User_Name,user,User),
+        coalesce(TargetUserName,Target_User_Name,mvindex(Account_Name,0),user,User)
+    )
+    | eval event_account=lower(replace(trim(account_value),"@.*$",""))
+    | eval source_address=replace(
+        lower(trim(coalesce(IpAddress,Source_Network_Address,Client_Address,src_ip,SourceAddress))),
+        "^::ffff:",
+        ""
+    )
+    | eval result_code=upper(trim(coalesce(Status,Result_Code,Failure_Code)))
+    | where event_account=runtime_target
+        AND isnotnull(containment_epoch)
+        AND _time>=containment_epoch
+    | eval successful_authentication=if(
+        event_code=4624
+        OR (event_code=4768 AND result_code IN ("","0","0X0")),
+        1,
+        0
+    )
+    | eval failed_or_denied=if(
+        event_code IN (4771,4625)
+        OR (event_code=4768 AND result_code NOT IN ("","0","0X0")),
+        1,
+        0
+    )
+    | eval explicit_credential_use=if(event_code=4648,1,0)
+    | eval privileged_session=if(event_code=4672,1,0)
+    | stats
+        count as total_authentication_events
+        sum(successful_authentication) as successful_authentication_events
+        sum(failed_or_denied) as failed_or_denied_events
+        sum(explicit_credential_use) as explicit_credential_events
+        sum(privileged_session) as privileged_session_events
+        values(source_address) as source_addresses
+        values(event_code) as event_codes
+]
+| stats
+    max(total_authentication_events) as total_authentication_events
+    max(successful_authentication_events) as successful_authentication_events
+    max(failed_or_denied_events) as failed_or_denied_events
+    max(explicit_credential_events) as explicit_credential_events
+    max(privileged_session_events) as privileged_session_events
+    values(source_addresses) as source_addresses
+    values(event_codes) as event_codes
+| eval runtime_target=lower(trim("$validate_current_ad_account_state.message.target_account"))
+| eval containment_iso="$validate_current_ad_account_state.message.ad_action_request.planned_at"
+| eval containment_epoch=strptime(substr(containment_iso,1,19)."+0000","%Y-%m-%dT%H:%M:%S%z")
+| eval verification_window_valid=if(
+    isnotnull(containment_epoch) AND runtime_target!="",
+    "true",
+    "false"
+)
+| eval authentication_observation=case(
+    verification_window_valid!="true",
+    "VERIFICATION_WINDOW_INVALID",
+    successful_authentication_events>0,
+    "SUCCESSFUL_AUTHENTICATION_OBSERVED_AFTER_RESPONSE",
+    failed_or_denied_events>0,
+    "FAILED_OR_DENIED_AUTHENTICATION_OBSERVED",
+    total_authentication_events=0,
+    "NO_POST_RESPONSE_AUTHENTICATION_EVENTS",
+    true(),
+    "POST_RESPONSE_IDENTITY_ACTIVITY_REQUIRES_REVIEW"
+)
+| table runtime_target authentication_observation verification_window_valid total_authentication_events successful_authentication_events failed_or_denied_events explicit_credential_events privileged_session_events source_addresses event_codes

@@ -1,0 +1,15 @@
+# Merge these stanzas into the WIN10-CLIENT01 Universal Forwarder local
+# inputs.conf only if they are not already defined there. Do not create
+# duplicate stanzas. Restart the forwarder after the monitoring phase begins.
+
+[WinEventLog://System]
+disabled = 0
+index = main
+renderXml = true
+checkpointInterval = 5
+
+[WinEventLog://Application]
+disabled = 0
+index = main
+renderXml = true
+checkpointInterval = 5

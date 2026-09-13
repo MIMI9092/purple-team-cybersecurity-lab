@@ -11,6 +11,18 @@ Important interfaces:
 - Universal Forwarder receiver: TCP `9997`
 - OPNsense syslog input: UDP `5514`
 
+## Current License and Dashboard State
+
+Splunk uses an active Enterprise Developer license with a 10 GB/day indexing
+quota and an expiration date of 6 March 2027. The expired Enterprise Trial
+group is no longer active.
+
+The full 12-panel `Purple Team Executive Overview` Dashboard Studio view was
+restored after licensing. An `All time` validation returned indexed-event,
+sourcetype, detection, scheduler, host, authentication and index-distribution
+results without the previous `tstats` license errors. See
+[[Splunk License and Executive Dashboard]].
+
 ## Collected Sources
 
 | Source | Method | Index / Sourcetype |

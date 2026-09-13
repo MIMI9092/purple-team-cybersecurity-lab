@@ -1,0 +1,200 @@
+app_version: 1.0.0
+name: PB05 Endpoint Response
+description: Restricted WinRM response actions for the PB05 lab endpoint.
+contact_info:
+  name: Mariam
+tags:
+  - pb05
+  - endpoint
+  - winrm
+  - containment
+categories:
+  - EDR & AV
+  - SIEM
+authentication:
+  required: true
+  parameters:
+    - name: server
+      description: Fixed PB05 Windows endpoint address.
+      example: "10.10.30.20"
+      required: true
+      schema:
+        type: string
+    - name: port
+      description: WinRM HTTP port. PB05 v1 only permits 5985.
+      example: "5985"
+      required: true
+      schema:
+        type: string
+    - name: domain
+      description: Active Directory NetBIOS domain.
+      example: "LAB"
+      required: true
+      schema:
+        type: string
+    - name: login_user
+      description: Dedicated PB05 WinRM management identity.
+      example: "svc_soar_pb05"
+      required: true
+      schema:
+        type: string
+    - name: password
+      description: Password for the dedicated PB05 WinRM identity.
+      example: "********"
+      required: true
+      schema:
+        type: string
+actions:
+  - name: get_pb05_endpoint_state
+    description: Capture the allow-listed process and Run-value state without changing the endpoint.
+    parameters:
+      - name: case_id
+        required: true
+        example: "PB05-CASE-0123456789ABCDEF"
+        schema:
+          type: string
+      - name: target_host
+        required: true
+        example: "WIN10-CLIENT01"
+        schema:
+          type: string
+      - name: target_user_sid
+        required: true
+        example: "S-1-5-21-722403993-16450863-2166090910-1106"
+        schema:
+          type: string
+      - name: process_name
+        required: true
+        example: "chisel.exe"
+        schema:
+          type: string
+      - name: run_value_name
+        required: true
+        example: "PFA-Lab-Tunnel"
+        schema:
+          type: string
+      - name: callback_address
+        required: true
+        example: "192.168.111.144"
+        schema:
+          type: string
+      - name: callback_port
+        required: true
+        example: "443"
+        schema:
+          type: string
+    returns:
+      schema:
+        type: string
+
+  - name: stop_verified_process
+    description: Stop only the exact process instance preserved in the PB05 evidence snapshot.
+    parameters:
+      - name: case_id
+        required: true
+        schema:
+          type: string
+      - name: target_host
+        required: true
+        schema:
+          type: string
+      - name: process_id
+        required: true
+        schema:
+          type: string
+      - name: expected_process_name
+        required: true
+        schema:
+          type: string
+      - name: expected_process_path
+        required: true
+        multiline: true
+        schema:
+          type: string
+      - name: expected_command_line
+        required: true
+        multiline: true
+        schema:
+          type: string
+      - name: expected_process_creation_time
+        required: true
+        schema:
+          type: string
+      - name: expected_process_user
+        required: true
+        schema:
+          type: string
+      - name: callback_address
+        required: true
+        schema:
+          type: string
+      - name: callback_port
+        required: true
+        schema:
+          type: string
+    returns:
+      schema:
+        type: string
+
+  - name: remove_verified_run_value
+    description: Remove only the exact allow-listed Run value when its data still matches the evidence snapshot.
+    parameters:
+      - name: case_id
+        required: true
+        schema:
+          type: string
+      - name: target_host
+        required: true
+        schema:
+          type: string
+      - name: target_user_sid
+        required: true
+        schema:
+          type: string
+      - name: run_value_name
+        required: true
+        schema:
+          type: string
+      - name: expected_value_data
+        required: true
+        multiline: true
+        schema:
+          type: string
+    returns:
+      schema:
+        type: string
+
+  - name: verify_pb05_endpoint_state
+    description: Verify that the allow-listed tunnel process and persistence value are absent.
+    parameters:
+      - name: case_id
+        required: true
+        schema:
+          type: string
+      - name: target_host
+        required: true
+        schema:
+          type: string
+      - name: target_user_sid
+        required: true
+        schema:
+          type: string
+      - name: process_name
+        required: true
+        schema:
+          type: string
+      - name: run_value_name
+        required: true
+        schema:
+          type: string
+      - name: callback_address
+        required: true
+        schema:
+          type: string
+      - name: callback_port
+        required: true
+        schema:
+          type: string
+    returns:
+      schema:
+        type: string

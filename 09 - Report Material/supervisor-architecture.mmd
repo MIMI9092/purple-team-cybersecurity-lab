@@ -1,0 +1,10 @@
+flowchart LR
+    Kali["External Kali"] --> FW["OPNsense + Suricata"]
+    FW --> R1["Cisco R1"]
+    R1 --> DMZ["DMZ<br/>DVWA 10.10.60.10"]
+    R1 --> INT["Internal<br/>WIN10 + AD-DC01"]
+    R1 --> SOC["Security<br/>Splunk + Shuffle"]
+    DMZ -->|"controlled pivot"| INT
+    FW -->|"syslog / EVE"| SOC
+    INT -->|"Windows events"| SOC
+    SOC -->|"approved API response"| FW

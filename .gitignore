@@ -16,6 +16,8 @@ desktop.ini
 *.kirbi
 *.hash
 *.hc22000
+*.license
+*.lic
 
 # Virtual-machine and lock files
 *.vmdk
@@ -29,3 +31,27 @@ desktop.ini
 *.tmp
 *.bak
 *~
+
+# Language and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local secrets and private keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+
+# Redundant packaged artifacts
+*.zip
+
+# Purple-team replay local state and secrets
+10 - Automation/Purple-Team-Attack-Replay/config/lab.local.psd1
+10 - Automation/Purple-Team-Attack-Replay/evidence/

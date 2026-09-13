@@ -1,0 +1,232 @@
+% Minimal supervisor report for the Purple Team Cybersecurity Lab.
+% Export the two Mermaid sources as PNG files using https://mermaid.live,
+% place them beside this file, then compile this file with pdfLaTeX.
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+
+\definecolor{accent}{HTML}{155E75}
+\definecolor{light}{HTML}{F1F5F9}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=accent,
+  pdftitle={Purple Team Cybersecurity Lab -- Supervisor Progress Report},
+  pdfauthor={Mariam Ibni}
+}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Purple Team Cybersecurity Lab}
+\rhead{Supervisor Progress Report}
+\cfoot{\thepage}
+
+\newcommand{\diagram}[2]{%
+  \begin{figure}[ht]
+    \centering
+    \IfFileExists{#1}{%
+      \includegraphics[width=0.96\textwidth,height=0.32\textheight,keepaspectratio]{#1}%
+    }{%
+      \fbox{\parbox[c][3.2cm][c]{0.9\textwidth}{\centering
+      Mermaid diagram not rendered yet.\\Run the Mermaid CLI command before compiling.}}%
+    }
+    \caption{#2}
+  \end{figure}
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2.5cm}
+  {\Huge\bfseries Purple Team Cybersecurity Lab\par}
+  \vspace{0.6cm}
+  {\LARGE Supervisor Progress Report\par}
+  \vspace{1.5cm}
+  \rule{0.75\textwidth}{0.6pt}
+  \vspace{1.2cm}
+
+  \begin{tabular}{rl}
+    \textbf{Student:} & Mariam Ibni \\
+    \textbf{Company:} & CBI \\
+    \textbf{Supervisor:} & Yassine Medouar \\
+    \textbf{Date:} & 11 August 2026 \\
+  \end{tabular}
+
+  \vfill
+  \colorbox{light}{%
+    \parbox{0.82\textwidth}{%
+      \centering
+      This short report summarizes the laboratory, the completed offensive and
+      defensive work, the current SOAR implementation, and the next priorities.
+      Detailed technical evidence remains in the Obsidian project vault.
+    }}
+  \vfill
+\end{titlepage}
+
+\section{Project Objective}
+
+The project builds an isolated Purple Team laboratory in which a controlled
+attack is executed across a segmented enterprise-style network and then
+detected, investigated, and partially contained using defensive tooling.
+
+The main objectives are to:
+
+\begin{itemize}
+  \item demonstrate a realistic attack path from an exposed web application to
+        internal Windows and Active Directory systems;
+  \item centralize network, web, endpoint, and identity telemetry in Splunk;
+  \item develop behavior-based detections mapped to MITRE ATT\&CK;
+  \item validate detections through repeatable adversary emulation; and
+  \item introduce analyst-approved, temporary, and reversible SOAR response.
+\end{itemize}
+
+\section{Laboratory Architecture}
+
+The environment separates the external, DMZ, internal, security-monitoring,
+and transit networks. OPNsense provides firewalling and Suricata telemetry,
+while Cisco routing connects the internal zones. Splunk centralizes logs and
+Shuffle orchestrates response workflows.
+
+\diagram{supervisor-architecture.png}{Simplified laboratory architecture generated from Mermaid.}
+
+\section{Work Completed}
+
+\subsection{Infrastructure}
+
+The following core services are operational:
+
+\begin{itemize}
+  \item OPNsense firewall with Suricata and remote syslog;
+  \item Cisco inter-zone routing and segmented VLANs;
+  \item DVWA in the DMZ;
+  \item Active Directory domain controller and domain-joined Windows client;
+  \item Splunk with Windows forwarders and OPNsense ingestion; and
+  \item self-hosted Shuffle SOAR integrated with Splunk and OPNsense APIs.
+\end{itemize}
+
+\subsection{Controlled Offensive Scenario}
+
+The completed attack simulation progressed through:
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
+  \item external reconnaissance and web discovery;
+  \item SQL injection and DVWA command execution;
+  \item reverse shell and Chisel tunnelling through the DMZ;
+  \item WinRM access to the Windows client;
+  \item Active Directory discovery and Kerberoasting;
+  \item controlled offline credential recovery and valid-account testing;
+  \item authorization-boundary validation;
+  \item Run-key persistence and reverse SOCKS simulation; and
+  \item a limited password-spray exercise.
+\end{enumerate}
+
+All offensive activity was performed in the isolated lab. Secrets and reusable
+credential material are excluded from this report and the documentation vault.
+
+\subsection{Detection Engineering}
+
+Splunk detections were built and validated across the full attack path. The
+current production catalog contains 21 enabled, application-shared alerts.
+Important correlation rules include:
+
+\begin{itemize}
+  \item web exploitation followed by an external callback;
+  \item long-lived Chisel/WebSocket tunnelling;
+  \item DMZ-originated internal discovery and WinRM activity;
+  \item successful Windows authentication following remote-management traffic;
+  \item the full D13 web-compromise-to-internal-access chain;
+  \item Kerberoasting and later service-account use;
+  \item Run-key PowerShell persistence and reverse SOCKS execution; and
+  \item telemetry-source silence or ingestion delay.
+\end{itemize}
+
+D13, D15, and D18 were moved to staggered 15-minute schedules after scheduler
+telemetry showed concurrency skips. Post-change validation completed with no
+skipped or failed runs and maximum runtimes below 60 seconds.
+
+\diagram{supervisor-lifecycle.png}{Attack, detection, and response lifecycle generated from Mermaid.}
+
+\section{SOAR Playbook PB01}
+
+The first production-candidate playbook is
+\texttt{PB01 -- D13 Web Compromise to Internal Access}. Its current flow is:
+
+\begin{itemize}
+  \item receive and normalize the D13 result;
+  \item enrich Windows authentication and firewall evidence through Splunk;
+  \item construct a P1 analyst case;
+  \item send an Approve/Reject email through Brevo;
+  \item require explicit analyst approval;
+  \item validate the alert identity, response mode, entities, and API access;
+  \item temporarily add the approved DMZ pivot to an OPNsense external alias;
+  \item verify the network effect; and
+  \item remove the temporary control and confirm recovery.
+\end{itemize}
+
+The containment scope is intentionally narrow: it blocks only new TCP
+connections from the approved DMZ pivot to the affected Windows endpoint on
+WinRM port 5985. It does not isolate the whole host, disable an account, or
+block unrelated services.
+
+\section{Validation Results}
+
+\begin{tabularx}{\textwidth}{@{}p{0.30\textwidth}X@{}}
+\toprule
+\textbf{Validation} & \textbf{Outcome} \\
+\midrule
+Splunk to Shuffle & Webhook executions and API enrichment succeeded. \\
+Analyst approval & Approve and Reject paths were validated; email delivery succeeded. \\
+Dry-run safety gate & Missing live-response mode prevented the firewall write. \\
+Live containment & OPNsense added the pivot and a fresh DMZ-to-WinRM connection timed out. \\
+Recovery & The alias entry was removed manually and WinRM connectivity returned. \\
+Automatic rollback & Not yet accepted; a Shuffle verification branch prevented the delayed rollback from being reached. \\
+\bottomrule
+\end{tabularx}
+
+The live test therefore proved the containment control but also identified an
+important orchestration weakness. A workflow marked \textit{Finished} does not
+necessarily mean that every required recovery action completed.
+
+\section{Current Status and Next Steps}
+
+PB01 remains a production candidate. Work is paused before another live test.
+The next priorities are:
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
+  \item schedule rollback directly after a confirmed firewall write so it is
+        independent of verification and documentation branches;
+  \item test successful, empty-state, API-error, and rollback-error paths;
+  \item repeat the complete contain--verify--rollback--recovery cycle;
+  \item document and package PB01 as a reusable playbook pattern;
+  \item adapt the pattern for reverse SOCKS, Kerberoasting/compromised service
+        accounts, and telemetry-loss alerts; and
+  \item continue planned endpoint-telemetry and adversary-emulation improvements.
+\end{enumerate}
+
+\section{Conclusion}
+
+The project has progressed from infrastructure deployment and adversary
+simulation to validated multi-source detections and analyst-controlled response.
+The current work demonstrates both the effectiveness of scoped containment and
+the importance of testing SOAR failure paths. The remaining PB01 work focuses
+on making rollback independent, verifiable, and safe before the design is reused
+for additional playbooks.
+
+\end{document}

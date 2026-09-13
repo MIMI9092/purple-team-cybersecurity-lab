@@ -1,0 +1,7 @@
+| makeresults
+| eval baseline=1
+| append [ search index=main earliest=-30m latest=now host="AD-DC01" source="WinEventLog:Security" (EventCode=4768 OR EventCode=4771 OR EventCode=4624 OR EventCode=4625 OR EventCode=4648 OR EventCode=4672)
+| eval baseline=0 ]
+| stats sum(eval(if(baseline=0,1,0))) as matching_events
+| eval authentication_observation="EVENT_SEARCH_DIAGNOSTIC_OK"
+| table authentication_observation matching_events

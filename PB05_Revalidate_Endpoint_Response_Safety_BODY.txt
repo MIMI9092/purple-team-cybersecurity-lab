@@ -1,0 +1,74 @@
+search=| inputlookup pb05_endpoint_assets.csv
+| eval runtime_case_id="$validate_pb05_analyst_decision.message.case_id"
+| eval runtime_campaign_id="$validate_pb05_analyst_decision.message.campaign_id"
+| eval runtime_endpoint_host=upper(mvindex(split(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.endpoint_host"), "."), 0))
+| eval runtime_endpoint_address=replace(lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.endpoint_address")), "^::ffff:", "")
+| eval runtime_affected_user=lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.affected_user"))
+| eval runtime_affected_user_sid=upper(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.user_sid"))
+| eval runtime_callback_address=replace(lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.callback_address")), "^::ffff:", "")
+| eval runtime_callback_port=trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.callback_port")
+| eval lookup_endpoint_host=upper(mvindex(split(trim(endpoint_host), "."), 0))
+| eval lookup_endpoint_address=replace(lower(trim(endpoint_address)), "^::ffff:", "")
+| eval lookup_affected_user=lower(trim(affected_user))
+| eval lookup_affected_user_sid=upper(trim(affected_user_sid))
+| eval policy_enabled=lower(trim(enabled))
+| eval endpoint_response_normalized=lower(trim(endpoint_response_allowed))
+| eval process_stop_normalized=lower(trim(process_stop_allowed))
+| eval persistence_removal_normalized=lower(trim(persistence_removal_allowed))
+| eval c2_block_normalized=lower(trim(c2_destination_block_allowed))
+| eval pf_state_termination_normalized=lower(trim(pf_state_termination_allowed))
+| eval host_isolation_normalized=lower(trim(host_isolation_allowed))
+| eval binary_deletion_normalized=lower(trim(binary_deletion_allowed))
+| eval evidence_preservation_normalized=lower(trim(evidence_preservation_required))
+| eval management_access_preservation_normalized=lower(trim(management_access_preservation_required))
+| eval user_hive_required_normalized=lower(trim(user_hive_required))
+| where policy_enabled="true"
+| where lookup_endpoint_host=runtime_endpoint_host
+| where lookup_affected_user=runtime_affected_user
+| where runtime_endpoint_address="" OR lookup_endpoint_address=runtime_endpoint_address
+| where runtime_affected_user_sid="" OR lookup_affected_user_sid=runtime_affected_user_sid
+| eventstats count as matching_asset_rows
+| eval asset_row_found=1
+| eval endpoint_known="true"
+| eval asset_lookup_status=if(matching_asset_rows=1, "ENDPOINT_FOUND", "AMBIGUOUS_ENDPOINT_MATCH")
+| eval identity_binding_status=case(runtime_affected_user_sid="", "REFUSED_MISSING_AFFECTED_USER_SID", lookup_affected_user_sid!=runtime_affected_user_sid, "REFUSED_AFFECTED_USER_SID_MISMATCH", true(), "VALIDATED_USER_SID_MATCH")
+| eval endpoint_safety_status=case(matching_asset_rows!=1, "REFUSED_AMBIGUOUS_ENDPOINT_MATCH", endpoint_response_normalized!="true", "REFUSED_ENDPOINT_RESPONSE_NOT_ALLOWED", evidence_preservation_normalized!="true", "REFUSED_EVIDENCE_PRESERVATION_NOT_REQUIRED", management_access_preservation_normalized!="true", "REFUSED_MANAGEMENT_ACCESS_NOT_PROTECTED", identity_binding_status!="VALIDATED_USER_SID_MATCH", identity_binding_status, upper(trim(registry_hive_strategy))!="HKEY_USERS_VALIDATED_USER_SID", "REFUSED_UNSAFE_REGISTRY_HIVE_STRATEGY", true(), "ELIGIBLE_FOR_APPROVED_ENDPOINT_RESPONSE")
+| eval network_safety_status=case(c2_block_normalized!="true", "REFUSED_C2_DESTINATION_BLOCK_NOT_ALLOWED", pf_state_termination_normalized!="true", "REFUSED_PF_STATE_TERMINATION_NOT_ALLOWED", runtime_callback_address="", "REFUSED_MISSING_CALLBACK_ADDRESS", runtime_callback_port="", "REFUSED_MISSING_CALLBACK_PORT", true(), "ELIGIBLE_FOR_APPROVED_NETWORK_RESPONSE")
+| eval prohibited_action_policy_status=case(host_isolation_normalized="true", "REFUSED_UNEXPECTED_HOST_ISOLATION_PERMISSION", binary_deletion_normalized="true", "REFUSED_UNEXPECTED_BINARY_DELETION_PERMISSION", true(), "PROHIBITED_ACTIONS_REMAIN_BLOCKED")
+| eval safety_revalidation_status=case(endpoint_safety_status!="ELIGIBLE_FOR_APPROVED_ENDPOINT_RESPONSE", "REFUSED", prohibited_action_policy_status!="PROHIBITED_ACTIONS_REMAIN_BLOCKED", "REFUSED", true(), "PASSED")
+| append [
+    | makeresults
+    | eval runtime_case_id="$validate_pb05_analyst_decision.message.case_id"
+    | eval runtime_campaign_id="$validate_pb05_analyst_decision.message.campaign_id"
+    | eval runtime_endpoint_host=upper(mvindex(split(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.endpoint_host"), "."), 0))
+    | eval runtime_endpoint_address=replace(lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.endpoint_address")), "^::ffff:", "")
+    | eval runtime_affected_user=lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.affected_user"))
+    | eval runtime_affected_user_sid=upper(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.user_sid"))
+    | eval runtime_callback_address=replace(lower(trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.callback_address")), "^::ffff:", "")
+    | eval runtime_callback_port=trim("$validate_pb05_analyst_decision.message.persisted_case_record.entities.callback_port")
+    | eval endpoint_known="false"
+    | eval asset_row_found=0
+    | eval matching_asset_rows=0
+    | eval asset_lookup_status="ENDPOINT_NOT_FOUND"
+    | eval identity_binding_status="REFUSED_UNKNOWN_ENDPOINT_OR_IDENTITY"
+    | eval endpoint_safety_status="REFUSED_UNKNOWN_ENDPOINT_OR_IDENTITY"
+    | eval network_safety_status="REFUSED_UNKNOWN_ENDPOINT_OR_IDENTITY"
+    | eval prohibited_action_policy_status="PROHIBITED_ACTIONS_REMAIN_BLOCKED"
+    | eval safety_revalidation_status="REFUSED"
+    | eval policy_enabled="false"
+    | eval endpoint_response_normalized="false"
+    | eval process_stop_normalized="false"
+    | eval persistence_removal_normalized="false"
+    | eval c2_block_normalized="false"
+    | eval pf_state_termination_normalized="false"
+    | eval host_isolation_normalized="false"
+    | eval binary_deletion_normalized="false"
+    | eval evidence_preservation_normalized="false"
+    | eval management_access_preservation_normalized="false"
+    | eval user_hive_required_normalized="true"
+]
+| sort 0 - asset_row_found
+| head 1
+| eval revalidated_at=now()
+| table runtime_case_id runtime_campaign_id runtime_endpoint_host runtime_endpoint_address runtime_affected_user runtime_affected_user_sid runtime_callback_address runtime_callback_port endpoint_known asset_lookup_status asset_row_found matching_asset_rows endpoint_host endpoint_address affected_user affected_user_sid domain asset_role endpoint_owner business_criticality endpoint_integration expected_user_profile allowed_tunnel_process_path allowed_persistence_script_path allowed_run_value_name registry_hive_strategy policy_enabled endpoint_response_normalized process_stop_normalized persistence_removal_normalized c2_block_normalized pf_state_termination_normalized host_isolation_normalized binary_deletion_normalized evidence_preservation_normalized management_access_preservation_normalized user_hive_required_normalized recovery_method recovery_owner identity_binding_status endpoint_safety_status network_safety_status prohibited_action_policy_status safety_revalidation_status revalidated_at
+&output_mode=json

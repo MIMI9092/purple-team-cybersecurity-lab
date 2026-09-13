@@ -1,0 +1,18 @@
+| makeresults
+| eval baseline=1,event_code=0,event_account="",source_address="",result_code=""
+| append [ search index=main earliest=-30m latest=now host="AD-DC01" source="WinEventLog:Security" (EventCode=4768 OR EventCode=4771 OR EventCode=4624 OR EventCode=4625 OR EventCode=4648 OR EventCode=4672)
+| eval baseline=0,event_code=tonumber(coalesce(EventCode,EventID))
+| eval account_value=if(event_code=4672,coalesce(SubjectUserName,Subject_User_Name,user,User,""),coalesce(TargetUserName,Target_User_Name,mvindex(Account_Name,0),user,User,""))
+| eval event_account=lower(mvindex(split(trim(account_value),"@"),0)),source_address=replace(lower(trim(coalesce(IpAddress,Source_Network_Address,Client_Address,src_ip,SourceAddress,""))),"^::ffff:",""),result_code=upper(trim(coalesce(Status,Result_Code,Failure_Code,""))) ]
+| eval runtime_target=lower(trim("$validate_current_ad_account_state.message.target_account")),containment_iso="$validate_current_ad_account_state.message.ad_action_request.planned_at"
+| eval containment_epoch=strptime(substr(containment_iso,1,19)."+0000","%Y-%m-%dT%H:%M:%S%z")
+| eval relevant_event=if(baseline=0 AND runtime_target!="" AND isnotnull(containment_epoch) AND event_account=runtime_target AND _time>=containment_epoch,1,0)
+| where baseline=1 OR relevant_event=1
+| eval successful_event=if(relevant_event=1 AND (event_code=4624 OR (event_code=4768 AND (result_code="" OR result_code="0" OR result_code="0X0"))),1,0)
+| eval failed_event=if(relevant_event=1 AND (event_code=4771 OR event_code=4625 OR (event_code=4768 AND result_code!="" AND result_code!="0" AND result_code!="0X0")),1,0)
+| eval explicit_event=if(relevant_event=1 AND event_code=4648,1,0),privileged_event=if(relevant_event=1 AND event_code=4672,1,0)
+| eval collected_source=if(relevant_event=1 AND source_address!="",source_address,null()),collected_code=if(relevant_event=1,tostring(event_code),null())
+| stats first(runtime_target) as runtime_target first(containment_iso) as containment_iso first(containment_epoch) as containment_epoch sum(relevant_event) as total_authentication_events sum(successful_event) as successful_authentication_events sum(failed_event) as failed_or_denied_events sum(explicit_event) as explicit_credential_events sum(privileged_event) as privileged_session_events values(collected_source) as source_addresses values(collected_code) as event_codes
+| eval verification_window_valid=if(runtime_target!="" AND isnotnull(containment_epoch),"true","false")
+| eval authentication_observation=case(verification_window_valid!="true","VERIFICATION_WINDOW_INVALID",successful_authentication_events>0,"SUCCESSFUL_AUTHENTICATION_OBSERVED_AFTER_RESPONSE",failed_or_denied_events>0,"FAILED_OR_DENIED_AUTHENTICATION_OBSERVED",total_authentication_events=0,"NO_POST_RESPONSE_AUTHENTICATION_EVENTS",true(),"POST_RESPONSE_IDENTITY_ACTIVITY_REQUIRES_REVIEW")
+| table runtime_target containment_iso authentication_observation verification_window_valid total_authentication_events successful_authentication_events failed_or_denied_events explicit_credential_events privileged_session_events source_addresses event_codes

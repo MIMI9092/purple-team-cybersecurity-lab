@@ -1,0 +1,380 @@
+{
+  "title": "Purple Team Executive Overview",
+  "description": "Executive overview of purple-team attack activity, Splunk detection coverage, telemetry health, and Shuffle SOAR response outcomes.",
+  "inputs": {
+    "input_global_trp": {
+      "options": {
+        "defaultValue": "-24h@h,now",
+        "token": "global_time"
+      },
+      "title": "Global Time Range",
+      "type": "input.timerange"
+    }
+  },
+  "defaults": {
+    "dataSources": {
+      "ds.search": {
+        "options": {
+          "queryParameters": {
+            "earliest": "$global_time.earliest$",
+            "latest": "$global_time.latest$"
+          }
+        }
+      },
+      "ds.spl2": {
+        "options": {
+          "queryParameters": {
+            "earliest": "$global_time.earliest$",
+            "latest": "$global_time.latest$"
+          }
+        }
+      }
+    },
+    "visualizations": {
+      "global": {
+        "showProgressBar": true
+      }
+    }
+  },
+  "visualizations": {
+    "viz_total_events": {
+      "dataSources": {
+        "primary": "ds_total_events"
+      },
+      "title": "Security Events",
+      "description": "Total indexed events in the selected time range.",
+      "options": {},
+      "type": "splunk.singlevalue"
+    },
+    "viz_active_sources": {
+      "dataSources": {
+        "primary": "ds_active_sources"
+      },
+      "title": "Active Data Sources",
+      "description": "Distinct sourcetypes reporting during the selected period.",
+      "options": {},
+      "type": "splunk.singlevalue"
+    },
+    "viz_enabled_detections": {
+      "dataSources": {
+        "primary": "ds_enabled_detections"
+      },
+      "title": "Enabled Detections",
+      "description": "Enabled scheduled D-series, Phase 1, and OPS01 searches.",
+      "options": {},
+      "type": "splunk.singlevalue"
+    },
+    "viz_detection_hits": {
+      "dataSources": {
+        "primary": "ds_detection_hits"
+      },
+      "title": "Detection Hits",
+      "description": "Successful project detection runs with one or more results.",
+      "options": {},
+      "type": "splunk.singlevalue"
+    },
+    "viz_event_volume": {
+      "dataSources": {
+        "primary": "ds_event_volume"
+      },
+      "title": "Security Event Volume by Index",
+      "description": "Hourly event volume across the laboratory indexes.",
+      "options": {},
+      "type": "splunk.line"
+    },
+    "viz_events_by_index": {
+      "dataSources": {
+        "primary": "ds_events_by_index"
+      },
+      "title": "Events by Index",
+      "description": "Relative contribution of each security-data index.",
+      "options": {},
+      "type": "splunk.column"
+    },
+    "viz_detection_activity": {
+      "dataSources": {
+        "primary": "ds_detection_activity"
+      },
+      "title": "Top Detection Activity",
+      "description": "Project detections ranked by returned results.",
+      "options": {},
+      "type": "splunk.bar"
+    },
+    "viz_authentication": {
+      "dataSources": {
+        "primary": "ds_authentication"
+      },
+      "title": "Windows and Kerberos Activity",
+      "description": "Selected Windows authentication and Kerberos event categories.",
+      "options": {},
+      "type": "splunk.pie"
+    },
+    "viz_top_hosts": {
+      "dataSources": {
+        "primary": "ds_top_hosts"
+      },
+      "title": "Top Reporting Hosts",
+      "description": "Hosts ranked by indexed event volume.",
+      "options": {},
+      "type": "splunk.bar"
+    },
+    "viz_soar_status": {
+      "dataSources": {
+        "primary": "ds_soar_status"
+      },
+      "title": "SOAR Playbook Validation",
+      "description": "Accepted playbook status for the current project scope.",
+      "options": {},
+      "type": "splunk.table"
+    },
+    "viz_data_health": {
+      "dataSources": {
+        "primary": "ds_data_health"
+      },
+      "title": "Telemetry Freshness",
+      "description": "Latest event and freshness status for each reporting host and sourcetype.",
+      "options": {},
+      "type": "splunk.table"
+    },
+    "viz_recent_detections": {
+      "dataSources": {
+        "primary": "ds_recent_detections"
+      },
+      "title": "Recent Detection Executions with Results",
+      "description": "Most recent successful project detection runs that returned results.",
+      "options": {},
+      "type": "splunk.table"
+    }
+  },
+  "dataSources": {
+    "ds_total_events": {
+      "name": "Total Security Events",
+      "options": {
+        "query": "| tstats count AS value WHERE index=*"
+      },
+      "type": "ds.search"
+    },
+    "ds_active_sources": {
+      "name": "Active Data Sources",
+      "options": {
+        "query": "| tstats count WHERE index=* BY sourcetype | stats dc(sourcetype) AS value"
+      },
+      "type": "ds.search"
+    },
+    "ds_enabled_detections": {
+      "name": "Enabled Project Detections",
+      "options": {
+        "query": "| rest /servicesNS/-/search/saved/searches splunk_server=local | search disabled=0 is_scheduled=1 | eval project_detection=if(match(title,\"^(D[0-9]{2}|P1-[A-Z][0-9]{2}|OPS01)\\s+-\"),1,0) | where project_detection=1 | stats count AS value"
+      },
+      "type": "ds.search"
+    },
+    "ds_detection_hits": {
+      "name": "Detection Hits",
+      "options": {
+        "query": "index=_internal sourcetype=scheduler status=success savedsearch_name=* | eval Results=tonumber(result_count) | where Results>0 AND match(savedsearch_name,\"^(D[0-9]{2}|P1-[A-Z][0-9]{2}|OPS01)\\s+-\") | stats count AS value"
+      },
+      "type": "ds.search"
+    },
+    "ds_event_volume": {
+      "name": "Security Event Volume by Index",
+      "options": {
+        "query": "| tstats count WHERE index=* BY _time span=1h index | timechart span=1h sum(count) BY index limit=6 useother=t"
+      },
+      "type": "ds.search"
+    },
+    "ds_events_by_index": {
+      "name": "Events by Index",
+      "options": {
+        "query": "| tstats count WHERE index=* BY index | sort - count | rename index AS Index count AS Events"
+      },
+      "type": "ds.search"
+    },
+    "ds_detection_activity": {
+      "name": "Top Detection Activity",
+      "options": {
+        "query": "index=_internal sourcetype=scheduler status=success savedsearch_name=* | eval Hits=tonumber(result_count) | where Hits>0 AND match(savedsearch_name,\"^(D[0-9]{2}|P1-[A-Z][0-9]{2}|OPS01)\\s+-\") | stats sum(Hits) AS Hits BY savedsearch_name | sort - Hits | head 10 | rename savedsearch_name AS Detection"
+      },
+      "type": "ds.search"
+    },
+    "ds_authentication": {
+      "name": "Windows and Kerberos Activity",
+      "options": {
+        "query": "index=main (EventCode=4624 OR EventCode=4625 OR EventCode=4768 OR EventCode=4769) | eval Outcome=case(EventCode=4624,\"Successful logon\",EventCode=4625,\"Failed logon\",EventCode=4768,\"Kerberos TGT\",EventCode=4769,\"Kerberos service ticket\",true(),\"Other\") | stats count AS Events BY Outcome | sort - Events"
+      },
+      "type": "ds.search"
+    },
+    "ds_top_hosts": {
+      "name": "Top Reporting Hosts",
+      "options": {
+        "query": "| tstats count WHERE index=* BY host | sort - count | head 10 | rename host AS Host count AS Events"
+      },
+      "type": "ds.search"
+    },
+    "ds_soar_status": {
+      "name": "SOAR Playbook Validation Status",
+      "options": {
+        "query": "| makeresults count=4 | streamstats count AS row | eval Playbook=case(row=1,\"PB02\",row=2,\"PB03\",row=3,\"PB04\",row=4,\"PB05\"), Scope=case(row=1,\"Reconnaissance response\",row=2,\"Web exploitation response\",row=3,\"Identity response\",row=4,\"Persistence and C2 response\"), Validation=case(row=1,\"FUNCTIONALLY COMPLETE\",row=2,\"CP2 AND CP3 VERIFIED\",row=3,\"IRP2 AND IRP3 VERIFIED\",row=4,\"CRP1 THROUGH CRP4 VERIFIED\") | table Playbook Scope Validation"
+      },
+      "type": "ds.search"
+    },
+    "ds_data_health": {
+      "name": "Telemetry Freshness",
+      "options": {
+        "query": "| tstats latest(_time) AS Last_Event count AS Events WHERE index=* BY index sourcetype host | eval Age_Minutes=round((now()-Last_Event)/60,1), Status=case(Age_Minutes<=15,\"HEALTHY\",Age_Minutes<=60,\"DELAYED\",true(),\"STALE\") | convert ctime(Last_Event) | sort - Age_Minutes | table Status index sourcetype host Events Last_Event Age_Minutes | rename index AS Index sourcetype AS Sourcetype host AS Host Last_Event AS Last_Event_Time Age_Minutes AS Age_Minutes"
+      },
+      "type": "ds.search"
+    },
+    "ds_recent_detections": {
+      "name": "Recent Detection Executions",
+      "options": {
+        "query": "index=_internal sourcetype=scheduler status=success savedsearch_name=* | eval Results=tonumber(result_count) | where Results>0 AND match(savedsearch_name,\"^(D[0-9]{2}|P1-[A-Z][0-9]{2}|OPS01)\\s+-\") | table _time savedsearch_name Results run_time | rename _time AS Time savedsearch_name AS Detection run_time AS Runtime_Seconds | sort - Time | head 20"
+      },
+      "type": "ds.search"
+    }
+  },
+  "layout": {
+    "globalInputs": [
+      "input_global_trp"
+    ],
+    "layoutDefinitions": {
+      "layout_1": {
+        "options": {
+          "height": 1930,
+          "width": 1440
+        },
+        "structure": [
+          {
+            "item": "viz_total_events",
+            "position": {
+              "h": 180,
+              "w": 360,
+              "x": 0,
+              "y": 0
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_active_sources",
+            "position": {
+              "h": 180,
+              "w": 360,
+              "x": 360,
+              "y": 0
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_enabled_detections",
+            "position": {
+              "h": 180,
+              "w": 360,
+              "x": 720,
+              "y": 0
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_detection_hits",
+            "position": {
+              "h": 180,
+              "w": 360,
+              "x": 1080,
+              "y": 0
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_event_volume",
+            "position": {
+              "h": 330,
+              "w": 930,
+              "x": 0,
+              "y": 180
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_events_by_index",
+            "position": {
+              "h": 330,
+              "w": 510,
+              "x": 930,
+              "y": 180
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_detection_activity",
+            "position": {
+              "h": 330,
+              "w": 720,
+              "x": 0,
+              "y": 510
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_authentication",
+            "position": {
+              "h": 330,
+              "w": 720,
+              "x": 720,
+              "y": 510
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_top_hosts",
+            "position": {
+              "h": 330,
+              "w": 720,
+              "x": 0,
+              "y": 840
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_soar_status",
+            "position": {
+              "h": 330,
+              "w": 720,
+              "x": 720,
+              "y": 840
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_data_health",
+            "position": {
+              "h": 360,
+              "w": 1440,
+              "x": 0,
+              "y": 1170
+            },
+            "type": "block"
+          },
+          {
+            "item": "viz_recent_detections",
+            "position": {
+              "h": 400,
+              "w": 1440,
+              "x": 0,
+              "y": 1530
+            },
+            "type": "block"
+          }
+        ],
+        "type": "grid"
+      }
+    },
+    "options": {},
+    "tabs": {
+      "items": [
+        {
+          "label": "Overview",
+          "layoutId": "layout_1"
+        }
+      ]
+    }
+  }
+}
